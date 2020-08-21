@@ -22,27 +22,68 @@ class _ProductsScreenState extends State<ProductsScreen> {
   List secondData = [];
   bool sort = false;
   String sortCategory = ' ';
+  var doc;
 
   //Пытался сделать загрузку листа в кеш, но там нельзя листДинамик добавать :(
-  getSPData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    farmers = (prefs.getStringList('farmers'));
-    products = (prefs.getStringList('products'));
+  getSPData(doc) async {
+    doc = json.decode(doc);
+    products = doc['products'];
+    farmers = doc['farmers'];
 
     JsonData.farmers = farmers;
+//сортируем лист в зависимости от нужной категории
+    List tempDoc = new List();
+    if(sortCategory == 'Мясо'){
+      for (var i = 0; i < products.length; i++){
+        try{
+          if(products[i]['characteristics'][1]['value'].toString().isNotEmpty ){
+            if(products[i]['characteristics'][1]['value'] == 'Мясо'){
+              tempDoc.add(products[i]);
+            }
+          }
+        }catch(e){
+          // print(e);
+        }
+      }
+      products = tempDoc;
+    } else if(sortCategory == 'Молоко и яйца'){
+      for (var i = 0; i < products.length; i++){
+        try{
+          if(products[i]['characteristics'][1]['value'].toString().isNotEmpty ){
+            if(products[i]['characteristics'][1]['value'] == 'Молоко и яйца'){
+              tempDoc.add(products[i]);
+            }
+          }
+        }catch(e){
+          // print(e);
+        }
+      }
+      products = tempDoc;
+    } else{
+      sortCategory = ' ';
+    }
 
-    print('loading from SP');
-    print("0000" + products.toString());
-    print("111111" + products[1]);
+//сортируем лист в зависимости от рейтинга(от бол. к менш.) и стоимости(от менш. к бол.)
+    if(!sort){
+      products.sort((a, b) {
+        return b['totalRating'].compareTo(a['totalRating']);
+      });
 
-    return products;
+    }else{
+      products.sort((a, b) {
+        return a['price'].compareTo(b['price']);
+      });
+
+    }
+
+    return doc;
   }
 
   //Эмуляция загрузки из сети
   getDataWeb() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    Timer(Duration(milliseconds: 500), () {
+    await Timer(Duration(milliseconds: 500), () {
       print('.....');
     });
 
@@ -50,6 +91,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     String jsonFile = await DefaultAssetBundle.of(context)
         .loadString("assets/data/data.json");
     var document = json.decode(jsonFile);
+
+    prefs.setString('doc', json.encode(document));
 
     products = document['products'];
     farmers = document['farmers'];
@@ -89,13 +132,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 //сортируем лист в зависимости от рейтинга(от бол. к менш.) и стоимости(от менш. к бол.)
     if(!sort){
-      print('loading from web');
       products.sort((a, b) {
         return b['totalRating'].compareTo(a['totalRating']);
       });
 
     }else{
-      print('loading from web');
       products.sort((a, b) {
         return a['price'].compareTo(b['price']);
       });
@@ -110,14 +151,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     JsonData.favList = (prefs.getStringList('fav'));
-    if(JsonData.favList == null)
+    if(JsonData.favList == null) {
       JsonData.favList = ['', ' '];
+    }
 
+    print(  "0000" + JsonData.doc.toString());
 
-    if (products.isEmpty) {
+    JsonData.doc = (prefs.getString('doc'));
+
+    if (JsonData.doc == null) {
+      print('loading from web');
       getDataWeb();
     } else {
-      getDataWeb();
+      print(   JsonData.doc.toString());
+      print('loading from local');
+      getSPData(JsonData.doc);
     }
   }
 
@@ -397,7 +445,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
                           shrinkWrap: true,
                                 crossAxisCount: 2,
-                                childAspectRatio: 0.53,
+                          childAspectRatio: 0.53,
+
                           physics: ScrollPhysics(),
                                 children:
                                     List.generate(products.length, (index) {
