@@ -24,7 +24,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String sortCategory = ' ';
   var doc;
 
-  //Пытался сделать загрузку листа в кеш, но там нельзя листДинамик добавать :(
+  //загрузка листа в кеш
   getSPData(doc) async {
     doc = json.decode(doc);
     products = doc['products'];
